@@ -55,6 +55,12 @@ by `airgradient-token'."
                   (integer :tag "Specific location id"))
   :group 'airgradient)
 
+(defcustom airgradient-fahrenheit-p nil
+  "If non-nil, report temperature in Fahrenheit instead of Celsius.
+Also changes the `temperature-c' output label to `temperature-f'."
+  :type 'boolean
+  :group 'airgradient)
+
 (defconst airgradient--api-base-url "https://api.airgradient.com/public/api/v1"
   "Base URL of the AirGradient public API.")
 
@@ -119,36 +125,47 @@ returning a list of alists, one per location."
     (replace-regexp-in-string
      "\\.[0-9]+\\(Z\\|[+-][0-9:]+\\)?\\'" "\\1" timestamp)))
 
+(defun airgradient--celsius-to-fahrenheit (celsius)
+  "Convert CELSIUS to Fahrenheit, rounded to 1 fraction digit."
+  (when celsius (/ (round (* (+ (* celsius 1.8) 32) 10)) 10.0)))
+
 (defun airgradient--format-measure (measure)
   "Render a single MEASURE alist as one dense line of human-readable ASCII."
   (let-alist measure
-    (mapconcat
-     #'identity
-     (delq nil
-           (list "AirGradient"
-                 .locationName
-                 (airgradient--fmt .locationId)
-                 (airgradient--fmt-timestamp .timestamp)
-                 (airgradient--kv "location" .locationType)
-                 (airgradient--kv "model" .model)
-                 (airgradient--kv "serial" .serialno)
-                 (airgradient--kv "firmware" .firmwareVersion)
-                 (airgradient--kv "pm1-ug/m3" (airgradient--fmt-corrected .pm01 .pm01_corrected))
-                 (airgradient--kv "pm2.5-ug/m3" (airgradient--fmt-corrected .pm02 .pm02_corrected))
-                 (airgradient--kv "pm10-ug/m3" (airgradient--fmt-corrected .pm10 .pm10_corrected))
-                 (airgradient--kv "pm0.3-particles/dl" (airgradient--fmt .pm003Count))
-                 (airgradient--kv "co2-ppm" (airgradient--fmt-corrected .rco2 .rco2_corrected))
-                 (airgradient--kv "temperature-c" (airgradient--fmt-corrected .atmp .atmp_corrected))
-                 (airgradient--kv "humidity-%" (airgradient--fmt-corrected .rhum .rhum_corrected))
-                 (airgradient--kv "tvoc-ppb" (airgradient--fmt .tvoc))
-                 (airgradient--kv "tvoc-index" (airgradient--fmt .tvocIndex))
-                 (airgradient--kv "nox-index" (airgradient--fmt .noxIndex))
-                 (airgradient--kv "wifi-signal" (airgradient--fmt .wifi))
-                 (airgradient--kv "battery-v" (airgradient--fmt .batteryVoltage))
-                 (airgradient--kv "panel-v" (airgradient--fmt .panelVoltage))
-                 (and .latitude .longitude (airgradient--kv "gps" (format "%s,%s" .latitude .longitude)))
-                 (and .anomalies (airgradient--kv "anomalies" (mapconcat #'identity .anomalies ",")))))
-     " ")))
+    (let ((atmp (if airgradient-fahrenheit-p
+                    (airgradient--celsius-to-fahrenheit .atmp)
+                  .atmp))
+          (atmp-corrected (if airgradient-fahrenheit-p
+                               (airgradient--celsius-to-fahrenheit .atmp_corrected)
+                             .atmp_corrected)))
+      (mapconcat
+       #'identity
+       (delq nil
+             (list "AirGradient"
+                   .locationName
+                   (airgradient--fmt .locationId)
+                   (airgradient--fmt-timestamp .timestamp)
+                   (airgradient--kv "location" .locationType)
+                   (airgradient--kv "model" .model)
+                   (airgradient--kv "serial" .serialno)
+                   (airgradient--kv "firmware" .firmwareVersion)
+                   (airgradient--kv "pm1-ug/m3" (airgradient--fmt-corrected .pm01 .pm01_corrected))
+                   (airgradient--kv "pm2.5-ug/m3" (airgradient--fmt-corrected .pm02 .pm02_corrected))
+                   (airgradient--kv "pm10-ug/m3" (airgradient--fmt-corrected .pm10 .pm10_corrected))
+                   (airgradient--kv "pm0.3-particles/dl" (airgradient--fmt .pm003Count))
+                   (airgradient--kv "co2-ppm" (airgradient--fmt-corrected .rco2 .rco2_corrected))
+                   (airgradient--kv (if airgradient-fahrenheit-p "temperature-f" "temperature-c")
+                                     (airgradient--fmt-corrected atmp atmp-corrected))
+                   (airgradient--kv "humidity-%" (airgradient--fmt-corrected .rhum .rhum_corrected))
+                   (airgradient--kv "tvoc-ppb" (airgradient--fmt .tvoc))
+                   (airgradient--kv "tvoc-index" (airgradient--fmt .tvocIndex))
+                   (airgradient--kv "nox-index" (airgradient--fmt .noxIndex))
+                   (airgradient--kv "wifi-signal" (airgradient--fmt .wifi))
+                   (airgradient--kv "battery-v" (airgradient--fmt .batteryVoltage))
+                   (airgradient--kv "panel-v" (airgradient--fmt .panelVoltage))
+                   (and .latitude .longitude (airgradient--kv "gps" (format "%s,%s" .latitude .longitude)))
+                   (and .anomalies (airgradient--kv "anomalies" (mapconcat #'identity .anomalies ",")))))
+       " "))))
 
 (defun airgradient--format-measures (data)
   "Render parsed JSON DATA (one measure or a list of measures) as ASCII text.

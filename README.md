@@ -28,6 +28,10 @@ Put `airgradient.el` on your `load-path` and:
   to use by default. When `nil` (the default), all locations for the
   place identified by `airgradient-token` are fetched.
 
+- `airgradient-fahrenheit-p` — if non-nil, report temperature in
+  Fahrenheit instead of Celsius. This also changes the output label
+  from `temperature-c` to `temperature-f`.
+
 ## Usage
 
 Run `M-x airgradient-insert` to insert a rendering of the current

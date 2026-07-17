@@ -41,8 +41,11 @@ confirm the output line still looks right.
 The file is organized as a small pipeline, top to bottom:
 
 1. **Config** — `airgradient-token` (defcustom, defaults to a public
-   demo token) and `airgradient-location-id` (optional default
-   location; `nil` means "all locations for the place").
+   demo token), `airgradient-location-id` (optional default
+   location; `nil` means "all locations for the place"), and
+   `airgradient-fahrenheit-p` (if non-nil, convert `atmp`/`atmp_corrected`
+   to Fahrenheit and relabel the field `temperature-f` instead of
+   `temperature-c`).
 2. **Transport** — `airgradient--request` does a synchronous GET via
    `url-retrieve-synchronously`, checks the HTTP status via
    `url-http-parse-response`, and parses the body with
@@ -76,6 +79,11 @@ The file is organized as a small pipeline, top to bottom:
    stripped (`2026-07-17T01:08:51.000Z` -> `2026-07-17T01:08:51Z`) by
    `airgradient--fmt-timestamp`, which needed a capture-group rewrite
    instead of a lookahead since Emacs regexps don't support lookahead.
+   The temperature field is computed (via `airgradient--celsius-to-fahrenheit`,
+   which rounds to 1 fraction digit) and relabeled *before* the
+   `delq`/`mapconcat` pipeline, so the raw-vs-corrected "differs"
+   comparison in `airgradient--fmt-corrected` runs on whichever unit
+   is active rather than always on Celsius.
 5. **Command** — `airgradient-insert` is the only interactive
    entry point; with a prefix arg it prompts for a numeric location id,
    otherwise falls back to `airgradient-location-id`, otherwise fetches
