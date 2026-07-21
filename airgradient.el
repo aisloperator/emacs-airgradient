@@ -21,9 +21,12 @@
 ;;
 ;;   M-x airgradient-insert
 ;;
-;; inserts a rendering of the current measures for every location
-;; associated with the configured token at point.  With a prefix
-;; argument, you are prompted for a specific numeric location id.
+;; inserts a brief one-line-per-location rendering of the current
+;; measures at point.  With a prefix argument, you are prompted for
+;; a specific numeric location id.
+;;
+;; The original, more detailed rendering is still available, non-
+;; interactively, as `airgradient-insert-legacy'.
 
 ;;; Code:
 
@@ -119,6 +122,10 @@ returning a list of alists, one per location."
   "Format \"LABEL VALUE\", or nil if VALUE is nil."
   (when value (format "%s %s" label value)))
 
+(defun airgradient--fmt-unit (value unit)
+  "Format VALUE immediately followed by UNIT, e.g. \"80.2F\", or nil if VALUE is nil."
+  (when value (format "%s%s" value unit)))
+
 (defun airgradient--fmt-timestamp (timestamp)
   "Format TIMESTAMP, stripping any fractional seconds, e.g. \".000\"."
   (when timestamp
@@ -167,27 +174,74 @@ returning a list of alists, one per location."
                    (and .anomalies (airgradient--kv "anomalies" (mapconcat #'identity .anomalies ",")))))
        " "))))
 
-(defun airgradient--format-measures (data)
+(defun airgradient--format-measure-brief (measure)
+  "Render a single MEASURE alist as one brief at-a-glance line."
+  (let-alist measure
+    (let* ((atmp (if airgradient-fahrenheit-p
+                     (airgradient--celsius-to-fahrenheit .atmp)
+                   .atmp))
+           (atmp-corrected (if airgradient-fahrenheit-p
+                                (airgradient--celsius-to-fahrenheit .atmp_corrected)
+                              .atmp_corrected))
+           (temperature (or atmp-corrected atmp))
+           (humidity (or .rhum_corrected .rhum))
+           (pm02 (or .pm02_corrected .pm02))
+           (rco2 (or .rco2_corrected .rco2)))
+      (mapconcat
+       #'identity
+       (delq nil
+             (list "AirGradient"
+                   .locationName
+                   (airgradient--fmt-unit temperature (if airgradient-fahrenheit-p "F" "C"))
+                   (airgradient--fmt-unit humidity "%")
+                   (airgradient--kv "pm2.5-ug/m3" (airgradient--fmt pm02))
+                   (airgradient--kv "co2-ppm" (airgradient--fmt rco2))
+                   (airgradient--kv "tvoc-ppb" (airgradient--fmt .tvoc))
+                   (airgradient--kv "tvoc-index" (airgradient--fmt .tvocIndex))
+                   (airgradient--kv "nox-index" (airgradient--fmt .noxIndex))))
+       " "))))
+
+(defun airgradient--format-measures (data formatter)
   "Render parsed JSON DATA (one measure or a list of measures) as ASCII text.
-Each measure is rendered as one dense line, terminated with a newline."
+Each measure is rendered with FORMATTER as one dense line, terminated with
+a newline."
   (if (airgradient--measure-list-p data)
       (if data
-          (concat (mapconcat #'airgradient--format-measure data "\n") "\n")
+          (concat (mapconcat formatter data "\n") "\n")
         "No AirGradient locations found.\n")
-    (concat (airgradient--format-measure data) "\n")))
+    (concat (funcall formatter data) "\n")))
 
 ;;;###autoload
 (defun airgradient-insert (&optional location-id)
-  "Insert a human-readable rendering of current AirGradient measures at point.
+  "Insert a brief rendering of current AirGradient measures at point.
 With a prefix argument, prompt for a specific numeric LOCATION-ID.
 Otherwise use `airgradient-location-id' if set, or else show every
-location for the place identified by `airgradient-token'."
+location for the place identified by `airgradient-token'.
+
+Each location is rendered as one brief at-a-glance line, e.g.
+\"AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3 co2-ppm 486 tvoc-ppb 127.1
+tvoc-index 133 nox-index 1\".  For the original, more detailed
+rendering, see `airgradient-insert-legacy'."
   (interactive
    (list (when current-prefix-arg
            (read-number "AirGradient location id: "))))
   (let* ((location-id (or location-id airgradient-location-id))
          (data (airgradient-fetch-current-measures location-id)))
-    (insert (airgradient--format-measures data))))
+    (insert (airgradient--format-measures data #'airgradient--format-measure-brief))))
+
+(defun airgradient-insert-legacy (&optional location-id)
+  "Insert the original, detailed rendering of current AirGradient measures.
+This is the rendering `airgradient-insert' used before it switched to a
+brief format.  Not bound to an interactive command so it doesn't clutter
+\\[execute-extended-command] completion; call it from Lisp (e.g. via
+`M-:') if you need the old, more detailed line.
+
+If LOCATION-ID is non-nil, fetch just that location's current measures.
+Otherwise use `airgradient-location-id' if set, or else show every
+location for the place identified by `airgradient-token'."
+  (let* ((location-id (or location-id airgradient-location-id))
+         (data (airgradient-fetch-current-measures location-id)))
+    (insert (airgradient--format-measures data #'airgradient--format-measure))))
 
 (provide 'airgradient)
 

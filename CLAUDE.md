@@ -64,30 +64,53 @@ The file is organized as a small pipeline, top to bottom:
    `(caar data)` is a symbol; a list of measures has alists as its
    elements, so `(caar data)` is itself a cons.
 4. **Rendering** — each measure is rendered as *one dense
-   space-separated ASCII line* (not a multi-line block), via
-   `airgradient--format-measure` and small helpers
-   (`airgradient--kv`, `airgradient--fmt-corrected`,
-   `airgradient--fmt-timestamp`). This exact format was specified
-   directly by the user, e.g.:
-   `AirGradient Home 199161 2026-07-17T01:08:51Z location indoor model I-9PSL-DE serial d83bda1ab538 firmware 3.6.2 pm1-ug/m3 1.5 pm2.5-ug/m3 4.8 (corrected 2.9) pm10-ug/m3 4.8 ... wifi-signal -26`.
-   Fields are built as a list of `(label value)` or plain tokens,
-   `nil`-filtered with `delq`, then `mapconcat`ed with `" "` — a
-   missing field (e.g. no `battery-v` on a given sensor model) simply
-   drops out of the line rather than leaving a blank. Corrected sensor
-   values (e.g. `pm02_corrected`) are only shown in parens when they
-   differ from the raw value. Timestamps have fractional seconds
-   stripped (`2026-07-17T01:08:51.000Z` -> `2026-07-17T01:08:51Z`) by
-   `airgradient--fmt-timestamp`, which needed a capture-group rewrite
-   instead of a lookahead since Emacs regexps don't support lookahead.
-   The temperature field is computed (via `airgradient--celsius-to-fahrenheit`,
-   which rounds to 1 fraction digit) and relabeled *before* the
-   `delq`/`mapconcat` pipeline, so the raw-vs-corrected "differs"
-   comparison in `airgradient--fmt-corrected` runs on whichever unit
-   is active rather than always on Celsius.
-5. **Command** — `airgradient-insert` is the only interactive
-   entry point; with a prefix arg it prompts for a numeric location id,
-   otherwise falls back to `airgradient-location-id`, otherwise fetches
-   every location for the token's place.
+   space-separated ASCII line* (not a multi-line block). There are two
+   renderers sharing the same small helpers (`airgradient--kv`,
+   `airgradient--fmt-corrected`, `airgradient--fmt-unit`,
+   `airgradient--fmt-timestamp`):
+   - `airgradient--format-measure` is the original, detailed renderer,
+     e.g.:
+     `AirGradient Home 199161 2026-07-17T01:08:51Z location indoor model I-9PSL-DE serial d83bda1ab538 firmware 3.6.2 pm1-ug/m3 1.5 pm2.5-ug/m3 4.8 (corrected 2.9) pm10-ug/m3 4.8 ... wifi-signal -26`.
+     Fields are built as a list of `(label value)` or plain tokens,
+     `nil`-filtered with `delq`, then `mapconcat`ed with `" "` — a
+     missing field (e.g. no `battery-v` on a given sensor model) simply
+     drops out of the line rather than leaving a blank. Corrected
+     sensor values (e.g. `pm02_corrected`) are only shown in parens
+     when they differ from the raw value. Timestamps have fractional
+     seconds stripped (`2026-07-17T01:08:51.000Z` ->
+     `2026-07-17T01:08:51Z`) by `airgradient--fmt-timestamp`, which
+     needed a capture-group rewrite instead of a lookahead since Emacs
+     regexps don't support lookahead.
+   - `airgradient--format-measure-brief` is the newer, terser default
+     renderer, e.g.: `AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3
+     co2-ppm 486 tvoc-ppb 127.1 tvoc-index 133 nox-index 1`. It drops
+     location id/timestamp/model/serial/firmware/pm1/pm10/pm0.3/wifi/
+     battery/panel/gps/anomalies, and for temperature, humidity,
+     PM2.5, and CO2 it collapses the raw-vs-corrected pair down to a
+     single value (corrected if present, via `(or corrected raw)`,
+     otherwise raw) instead of showing both like the detailed
+     renderer does. Temperature and humidity are also written
+     unit-suffixed with no space (`80.2F`, `56%`) via
+     `airgradient--fmt-unit`, rather than as a labeled `temperature-f`/
+     `humidity-%` pair.
+   - In both renderers the temperature field is computed (via
+     `airgradient--celsius-to-fahrenheit`, which rounds to 1 fraction
+     digit) *before* the corrected-vs-raw comparison, so that
+     comparison runs on whichever unit is active rather than always on
+     Celsius.
+   - `airgradient--format-measures` takes the renderer to use as a
+     `formatter` argument, so both commands below share the same
+     one-measure-vs-list-of-measures dispatch logic.
+5. **Commands** — `airgradient-insert` is the sole
+   `;;;###autoload`'d, interactive entry point, and uses
+   `airgradient--format-measure-brief`; with a prefix arg it prompts
+   for a numeric location id, otherwise falls back to
+   `airgradient-location-id`, otherwise fetches every location for the
+   token's place. `airgradient-insert-legacy` has the identical
+   location-id-resolution logic but is a plain (non-interactive,
+   non-autoloaded) function using `airgradient--format-measure`,
+   kept only so the original, detailed rendering remains reachable
+   from Lisp (e.g. `M-:`) without cluttering `M-x` completion.
 
 The full field list (units, corrected variants, etc.) comes from the
 API's OpenAPI/Swagger spec, fetched at

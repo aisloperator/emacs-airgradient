@@ -34,12 +34,32 @@ Put `airgradient.el` on your `load-path` and:
 
 ## Usage
 
-Run `M-x airgradient-insert` to insert a rendering of the current
+Run `M-x airgradient-insert` to insert a brief rendering of the current
 measures at point. With a prefix argument (`C-u M-x airgradient-insert`),
 you're prompted for a specific numeric location id instead of using the
 default.
 
-Each location is rendered as one dense ASCII line, for example:
+Each location is rendered as one brief, at-a-glance line, for example:
+
+```
+AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3 co2-ppm 486 tvoc-ppb 127.1 tvoc-index 133 nox-index 1
+```
+
+Temperature and humidity show the corrected value when available,
+otherwise the raw value; PM2.5 and CO2 do the same.
+
+For the original, more detailed rendering (location id, timestamp,
+model/serial/firmware, all PM sizes, raw-vs-corrected pairs,
+wifi-signal, battery/panel voltage, GPS, anomalies), call
+`airgradient-insert-legacy` from Lisp (e.g. via `M-:`). It isn't bound
+to an interactive command, so it won't clutter `M-x` completion, but
+it's there if you need it:
+
+```elisp
+(airgradient-insert-legacy)
+```
+
+which renders, for example:
 
 ```
 AirGradient Home 199161 2026-07-17T01:08:51Z location indoor model I-9PSL-DE serial d83bda1ab538 firmware 3.6.2 pm1-ug/m3 1.5 pm2.5-ug/m3 4.8 (corrected 2.9) pm10-ug/m3 4.8 pm0.3-particles/dl 255 co2-ppm 622 temperature-c 26.9 humidity-% 44 tvoc-ppb 208.3 tvoc-index 204 nox-index 1 wifi-signal -26
