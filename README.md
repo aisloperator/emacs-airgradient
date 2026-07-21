@@ -42,7 +42,7 @@ default.
 Each location is rendered as one brief, at-a-glance line, for example:
 
 ```
-AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3 co2-ppm 486 tvoc-ppb 127.1 tvoc-index 133 nox-index 1
+AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3 co2-ppm 486 tvoc-index 133 nox-index 1
 ```
 
 Temperature and humidity show the corrected value when available,

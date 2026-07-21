@@ -196,7 +196,6 @@ returning a list of alists, one per location."
                    (airgradient--fmt-unit humidity "%")
                    (airgradient--kv "pm2.5-ug/m3" (airgradient--fmt pm02))
                    (airgradient--kv "co2-ppm" (airgradient--fmt rco2))
-                   (airgradient--kv "tvoc-ppb" (airgradient--fmt .tvoc))
                    (airgradient--kv "tvoc-index" (airgradient--fmt .tvocIndex))
                    (airgradient--kv "nox-index" (airgradient--fmt .noxIndex))))
        " "))))
@@ -219,9 +218,9 @@ Otherwise use `airgradient-location-id' if set, or else show every
 location for the place identified by `airgradient-token'.
 
 Each location is rendered as one brief at-a-glance line, e.g.
-\"AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3 co2-ppm 486 tvoc-ppb 127.1
-tvoc-index 133 nox-index 1\".  For the original, more detailed
-rendering, see `airgradient-insert-legacy'."
+\"AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3 co2-ppm 486 tvoc-index 133
+nox-index 1\".  For the original, more detailed rendering, see
+`airgradient-insert-legacy'."
   (interactive
    (list (when current-prefix-arg
            (read-number "AirGradient location id: "))))

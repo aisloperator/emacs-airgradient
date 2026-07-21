@@ -83,16 +83,17 @@ The file is organized as a small pipeline, top to bottom:
      regexps don't support lookahead.
    - `airgradient--format-measure-brief` is the newer, terser default
      renderer, e.g.: `AirGradient Home 80.2F 56% pm2.5-ug/m3 7.3
-     co2-ppm 486 tvoc-ppb 127.1 tvoc-index 133 nox-index 1`. It drops
-     location id/timestamp/model/serial/firmware/pm1/pm10/pm0.3/wifi/
-     battery/panel/gps/anomalies, and for temperature, humidity,
-     PM2.5, and CO2 it collapses the raw-vs-corrected pair down to a
-     single value (corrected if present, via `(or corrected raw)`,
-     otherwise raw) instead of showing both like the detailed
-     renderer does. Temperature and humidity are also written
-     unit-suffixed with no space (`80.2F`, `56%`) via
-     `airgradient--fmt-unit`, rather than as a labeled `temperature-f`/
-     `humidity-%` pair.
+     co2-ppm 486 tvoc-index 133 nox-index 1`. It drops location
+     id/timestamp/model/serial/firmware/pm1/pm10/pm0.3/wifi/battery/
+     panel/gps/anomalies, and for temperature, humidity, PM2.5, and
+     CO2 it collapses the raw-vs-corrected pair down to a single value
+     (corrected if present, via `(or corrected raw)`, otherwise raw)
+     instead of showing both like the detailed renderer does.
+     Temperature and humidity are also written unit-suffixed with no
+     space (`80.2F`, `56%`) via `airgradient--fmt-unit`, rather than as
+     a labeled `temperature-f`/`humidity-%` pair. `tvoc-ppb` (the raw
+     ppb reading) is omitted in favor of `tvoc-index` alone, since
+     that's what AirGradient's own dashboard UI favors.
    - In both renderers the temperature field is computed (via
      `airgradient--celsius-to-fahrenheit`, which rounds to 1 fraction
      digit) *before* the corrected-vs-raw comparison, so that
