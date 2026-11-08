@@ -1,4 +1,5 @@
 *.elc
+*~
 \#*#
 .#*
-.claude/settings.local.json
+.claude
